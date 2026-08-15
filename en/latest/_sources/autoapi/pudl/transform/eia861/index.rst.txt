@@ -95,11 +95,10 @@ Module Contents
      data is an early release, and we extract this information from the filenames, as
      it's uniform across the whole dataset.
    * Convert report_year column to report_date.
-   * Aggregate values for rows with utility id 88888 (anonymized) - see _combine_88888_values
-     for details.
+   * If we've gotten an empty dataframe, make sure it has a data_maturity column.
 
 
-.. py:function:: _post_process(df: pandas.DataFrame) -> pandas.DataFrame
+.. py:function:: _post_process(df: pandas.DataFrame, name: str | None = None) -> pandas.DataFrame
 
    Post-processing applied to all EIA-861 dataframes.
 

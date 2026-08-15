@@ -1,19 +1,245 @@
 =======================================================================================
 PUDL Release Notes
 =======================================================================================
-
-.. _release-v2026.7.0:
+.. _release-v2026.9.0:
 
 ---------------------------------------------------------------------------------------
-v2026.7.0 (2026-07-XX)
+v2026.9.0 (2026-09-xx)
 ---------------------------------------------------------------------------------------
+
+This is the upcoming PUDL release.
+
+Bug Fixes & Data Cleaning
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Fixed ``set_gcs_temporary_hold`` only protecting the top level of a versioned
+  release path from deletion. It shelled out to ``gcloud storage objects update
+  gs://bucket/prefix/*``, and that glob only matches one path segment, so anything
+  nested in a subdirectory was silently left unheld. Updated the function to use the
+  ``google-cloud-storage`` API to recursively hold every object under the prefix and
+  verify after the fact that none were missed. Manually re-applied the hold to 4,000+
+  previously published versioned release objects that had been missed by the original
+  bug. See PR pr:`5477`.
+
+New Data
+^^^^^^^^
+
+EIA-923
+~~~~~~~
+
+* Added the :ref:`i_core_eia923__yearly_fuel_stocks` table, which reports end-of-month
+  coal, petroleum liquids, and petroleum coke stocks held at electric power sector
+  generating facilities, aggregated by census division or state. The wide monthly
+  source columns are reshaped into tall monthly records and the reported thousand-unit
+  quantities are converted to base units. See issue :issue:`5081` and PR :pr:`5431`.
+
+* Added :ref:`out_eia923__energy_storage` for reported EIA-923 energy storage
+  operations, with :ref:`out_eia923__monthly_energy_storage` and
+  :ref:`out_eia923__yearly_energy_storage` providing monthly and yearly aggregations.
+  All three include plant and utility metadata. See issue :issue:`4311` and PR
+  :pr:`5489`.
+
+EPA CEMS
+~~~~~~~~
+
+* Added a new analysis output, :ref:`out_epacems__yearly_operational_characteristics`,
+  which estimates generator operational characteristics such as minimum stable operating
+  level, minimum up/down times, ramp rates, and heat rates at maximum and minimum load,
+  inferred from hourly :doc:`EPA CEMS <data_sources/epacems>` gross load and fuel heat
+  content data over a rolling three-year window. This dagsterizes and vectorizes an
+  analysis originally developed by `Sylvan Energy <https://sylvan.energy/>`__, making it
+  available for all reporting states rather than just California. The output is
+  experimental and marked accordingly, since we are soliciting feedback from the
+  community on the underlying methodology. See issue :issue:`5106` and PR :pr:`5190`.
+
+.. _release-v2026.8.0:
+
+---------------------------------------------------------------------------------------
+v2026.8.0 (2026-08-07)
+---------------------------------------------------------------------------------------
+
+This is a regular quarterly PUDL release with a bunch of dataset updates. We've also
+added a new raw EPA MATS dataset, and Puerto Rico is now included in our EIA-860/860M
+data thanks to first-time contributor :user:`bsousa22`. We also tracked down and fixed a
+longstanding bug that had FERC Form 714 balancing authority data crossed between the
+Desert Southwest and Upper Great Plains West regions. See below for all the details.
+
+New Data
+^^^^^^^^
+
+EIA-860M
+~~~~~~~~
+
+* Added Puerto Rico :doc:`EIA-860M <data_sources/eia860>` data into EIA 860 tables. See
+  issue :issue:`4352` and PR :pr:`5360`. Shoutout to :user:`bsousa22` for making his
+  first PUDL contribution!
+
+EPA MATS
+~~~~~~~~
+
+* Added the EPA Mercury and Air Toxics Standards (MATS) dataset, extracted into a raw
+  table with additional records through end of June 2026. This data is not yet deeply
+  integrated into PUDL. See issue :issue:`5358` and PRs :pr:`5389`, :pr:`5464`. Also
+  a contribution from :user:`bsousa22`.
+
+Expanded Data Coverage
+^^^^^^^^^^^^^^^^^^^^^^
+
+EIA-191
+~~~~~~~
+
+* Updated :doc:`EIA-191 <data_sources/eia191>` data. See PR :pr:`5464`.
+
+EIA-860M
+~~~~~~~~
+
+* Added :doc:`EIA-860M <data_sources/eia860>` data through June 2026. See
+  issue :issue:`5459` and PR :pr:`5468`.
+
+EIA-923
+~~~~~~~
+
+* Added early release data for EIA-923 2025. See issue :issue:`5372` and PR :pr:`5391`.
+* Added :doc:`EIA-923M <data_sources/eia923>` data for April and May 2026. See issue
+  :issue:`5460` and PRs :pr:`5391,5468`.
+
+EIA-930
+~~~~~~~
+
+* Updated :doc:`EIA-930 <data_sources/eia930>` data. See PRs :pr:`5445,5464`.
+
+FERC-714
+~~~~~~~~
+
+* Added 2025 XBRL data for :doc:`FERC-714 <data_sources/ferc714>`. See :issue:`5424` and
+  PRs :pr:`5436,5464`.
+
+EIA Electricity API
+~~~~~~~~~~~~~~~~~~~
+
+* Updated the :doc:`bulk EIA Electricity API <data_sources/eiaapi>` data used to fill in
+  redacted fuel prices. See PRs :pr:`5441,5464`.
+
+EPA CEMS
+~~~~~~~~
+
+* Updated the :doc:`EPA CEMS <data_sources/epacems>` data with additional records
+  through end of June 2026. See PRs :pr:`5441,5464`.
+
+PHMSA Natural Gas data
+~~~~~~~~~~~~~~~~~~~~~~
+
+* Updated the :doc:`PHMSA natural gas <data_sources/phmsagas>` data. See PR :pr:`5464`.
+
+FERC Form 6
+~~~~~~~~~~~
+
+* Updated the raw FERC Form 6 archives to include additional 2025 data. This data is
+  converted to SQLite, but not deeply integrated into PUDL. See PR :pr:`5441`.
+
+Documentation
+^^^^^^^^^^^^^
+
+* Added LLM use guidelines and best practices to the
+  :doc:`contributor guide <CONTRIBUTING>` and :doc:`dev guide <dev/llm_best_practices>`.
+  See PR :pr:`5395`.
+* Set up the `sphinx_llm <https://github.com/NVIDIA/sphinx-llm>`__ Sphinx extension to
+  generate a Markdown version of the PUDL documentation, suitable for consumption by
+  LLMs, based on the `llms.txt <https://llmstxt.org/>`__ convention. Each page now
+  advertises its Markdown counterpart via a ``<link rel="alternate"
+  type="text/markdown">`` tag, and the site footer links directly to ``llms.txt``, so
+  that agents browsing the rendered HTML docs can discover and prefer the Markdown
+  versions. See PRs :pr:`5381,5393`.
+
+Bug Fixes & Data Cleaning
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Fixed incorrectly mapped Western Area Power Authority BA codes in FERC 714
+  data - previously, the Upper Great Plains West region FERC respondent was mapped
+  to the Desert Southwest region EIA balancing authority information, and vice
+  versa. See :issue:`4644` and :pr:`5408`.
+* Fixed an exact-float merge bug in FERC1 "exploded tables" corrections. The
+  :meth:`~pudl.output.ferc1.Exploder.add_sizable_minority_corrections` method matched
+  correction candidates by merging directly on floating point columns. Exact float
+  equality is extremely brittle, and moving from 32- to 64-bit floats
+  changed which utility/year pairs matched, producing extra rows and different
+  ``ending_balance`` sums in :ref:`out_ferc1__yearly_detailed_balance_sheet_assets` and
+  :ref:`out_ferc1__yearly_rate_base`. These were real matches being lost
+  due to the limited precision of 32-bit floats, on top of the brittleness of of merging
+  on floating point numbers. These are now being captured deterministically by merging
+  on values within a fixed tolerance of $5. See PR :pr:`5350`.
+* Fixed the Dagster asset graph for :doc:`EIA-860 <data_sources/eia860>` to correctly
+  depend on :doc:`EIA-860M <data_sources/eia860>`, so selecting the ``raw_eia860m``
+  asset group and its downstream assets now also captures the EIA-860 assets that
+  rely on it, instead of silently leaving them stale. See :issue:`4327` and
+  PR :pr:`5409`.
+
+Performance Improvements
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Switched from using ``pl.Enum`` to unconstrained ``pl.Categorical`` types to preserve
+  lazy execution in :func:`~pudl.helpers.get_parquet_table_polars`. This allows running
+  schema checks on large tables, and Pandera's Polars backend never actually enforced
+  data content checks on ``pl.LazyFrame`` assets (99% of assets in PUDL). See PR
+  :pr:`5434`. Implementing efficient content validation for ``pl.LazyFrame`` assets is
+  left to PR :pr:`5432`.
+* The fast ETL now processes only two representative
+  :doc:`EIA-861 <data_sources/eia861>` years instead of the entire time series, bringing
+  it in line with how every other dataset is already handled and speeding up both local
+  development and CI. Processing all years was originally a workaround for discontinued
+  columns and data validation tests that couldn't tolerate partial coverage; those
+  limitations have since been resolved. This change surfaced an implicit assumption in
+  the :doc:`FERC-714 <data_sources/ferc714>` outputs that all EIA-861 years were always
+  available, in the logic that repairs known-bad balancing authority/utility
+  associations by copying data from a known-good year. That repair logic has been
+  rewritten as an explicit, validated mapping of per-year fixes, so it degrades
+  gracefully when only a subset of years is present, and is substantially easier to
+  read, test, and extend than the compact form it replaces. See :issue:`2628` and
+  :pr:`4568`.
+
+Developer Experience
+^^^^^^^^^^^^^^^^^^^^
+
+* Standardized numeric dtypes to always use 64-bit values, and datetime types to use
+  microsecond resolution in :mod:`pudl.metadata.dtypes`. The unused ``compact`` argument
+  to :meth:`~pudl.metadata.classes.Field.to_pandas_dtype` was retired. See PR
+  :pr:`5350`.
+* Sanitized the batch job IDs used by the deploy and build workflows so they always
+  meet Google Batch's naming requirements, fixing failures we had previously worked
+  around by making the IDs more generic. See :issue:`5411` and PR :pr:`5429`.
+
+.. _release-v2026.7.2:
+
+---------------------------------------------------------------------------------------
+v2026.7.2 (2026-07-14)
+---------------------------------------------------------------------------------------
+
+This is a monthly PUDL data release, primarily motivated by updating
+the EIA-860M monthly data through May 2026. As usual, it also includes
+all of the other changes that have accumulated on ``main`` since our
+last release.
+
+This month, we have new EIA-176 tables, the EIA-860 early release,
+Parquet outputs for DBF assets, improved units handling, GeoParquet
+bugfixes, and better signal:noise ratio in unit test logging outputs.
 
 Enhancements
 ^^^^^^^^^^^^
 
 * Added experimental Parquet outputs derived from the FERC DBF databases, and basic
-  ``datpackage.json`` metadata describing their schemas to support querying and preview
+  ``datapackage.json`` metadata describing their schemas to support querying and preview
   through the `PUDL Data Viewer <https://data.catalyst.coop>`__. See PR :pr:`5339`.
+* Standardized all unit strings in :mod:`pudl.metadata.fields` to
+  `Pint expression syntax <https://pint.readthedocs.io/>`__, replacing ad-hoc
+  abbreviations (``gpm``, ``min``, ``F``, ``cfm``), underscore-separated
+  compound units (``lb_per_MMBTU``, ``USD_per_MWh``), and inconsistent
+  capitalization. A new :mod:`pudl.metadata.units` module defines
+  ``PUDL_UNIT_REGISTRY``, a ``pint.UnitRegistry`` extended with energy-industry
+  units (``MMBtu``, ``Mcf``, ``MMcf``, ``TBtu``, ``VAr``, ``USD``). Added extensive
+  new per-column units annotations. These changes should facilitate programmatic unit
+  parsing, display, and conversion, and they are now surfaced in the PUDL metadata and
+  datapackage outputs as machine-readable Pint-compatible unit definitions. See
+  :issue:`5078` and :pr:`5361`.
 
 New Data
 ^^^^^^^^
@@ -21,28 +247,99 @@ New Data
 EIA-176
 ~~~~~~~
 
-* Added detailed core EIA-176 continuation-line tables for natural gas imports,
-  supplemental gaseous fuel supplies, gas exports, and other gas disposition. See
+* Added detailed core :doc:`EIA-176 <data_sources/eia176>`
+  continuation-line tables for natural gas imports, supplemental
+  gaseous fuel supplies, gas exports, and other gas disposition. See
   :issue:`5240` and :pr:`5245`.
-
 
 Expanded Data Coverage
 ^^^^^^^^^^^^^^^^^^^^^^
 
-EIA860
+EIA-191
 ~~~~~~~
 
-* Added early release data for EIA-860 2025. See issue :issue:`5322` and PR :pr:`5324`.
+* Added :doc:`EIA-191 <data_sources/eia191>` data through end of
+  March 2026. See PR :pr:`5396`.
+
+EIA-930
+~~~~~~~
+
+* Added :doc:`EIA-930 <data_sources/eia930>` data through end of
+  June 2026. See PR :pr:`5396`
+
+EIA Electricity API
+~~~~~~~~~~~~~~~~~~~
+
+* Updated the bulk :doc:`EIA Electricity API <data_sources/eiaapi>` data
+  used to fill in redacted fuel prices. See PR :pr:`5396`.
+
+EPA CEMS
+~~~~~~~~
+
+* Added :doc:`EPA CEMS <data_sources/epacems>` data through end of
+  March 2026. See PR :pr:`5396`
+
+EIA-860
+~~~~~~~
+
+* Added early release data for :doc:`EIA-860
+  <data_sources/eia860>` 2025. See issue :issue:`5322` and PR
+  :pr:`5324`.
+
+EIA-860M
+~~~~~~~~
+
+* Added :doc:`EIA-860M <data_sources/eia860>` data through May 2026. See
+  issue :issue:`5369` and PR :pr:`5371`.
+
+FERC Forms 2 and 6
+~~~~~~~~~~~~~~~~~~
+
+* Updated the raw FERC Form 2 and 6 archives to include additional
+  2025 data. This data is converted to SQLite, but not deeply
+  integrated into PUDL. See PR :pr:`5396`.
+
+FERC CID
+~~~~~~~~
+
+* Updated the FERC company identifiers with data through end of
+  June 2026. See PR :pr:`5396`.
 
 Documentation
 ^^^^^^^^^^^^^
 
+* Expanded the developer docs around metadata naming, typing, and updates to explain
+  how unit annotations, field namespaces, and namespace/table-specific metadata
+  overrides should be defined and maintained. See :pr:`5361`.
+
 New Data Tests & Validations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* A new :func:`~pudl.dagster.asset_checks.valid_datapackage_unit_strings_check` asset
+  check factory validates all unit strings in the PUDL datapackage descriptor against
+  the registry after each ETL run. About a dozen fields in PHMSA gas and EIA-860 FGD
+  data that were typed as ``number`` but contain integer counts have been corrected to
+  ``"type": "integer"``. A bug where ``convert_cols_dtypes`` and ``get_parquet_table``
+  overrides in ``FIELD_METADATA_BY_RESOURCE``, were sometimes ignored has been fixed.
+* Added ``dbt`` ``expect_column_values_to_be_between`` tests to codify range
+  expectations for columns stated as percentages (0, 100) vs those that represent
+  fractional values (0, 1). Column naming still needs to be standardized. FERC Form 1
+  fraction tests use ``error_if`` thresholds to accommodate a known small number of
+  out-of-range values. See :pr:`5361`.
 
 Bug Fixes & Data Cleaning
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Three EIA-860 columns that EIA reports as percentages but PUDL describes as
+  fractions have been corrected. ``standard_so2_percent_scrubbed`` (boilers) was
+  already stored as a fraction but misnamed; it is now renamed
+  ``standard_so2_fraction_scrubbed``. ``max_oil_heat_input`` (multi-fuel generators)
+  and ``dry_cooling_pct`` (cooling equipment) were extracted as percentages; both are
+  now divided by 100 in the transform step and the cooling column is renamed
+  ``dry_cooling_fraction``. Field descriptions for the FERC1 ``*_fraction_cost``
+  columns have been updated to say "fraction (0-1)" instead of "percentage".
+  All true ``_pct`` columns now carry an explicit ``"unit": "percent"`` annotation.
+  See :pr:`5361`.
 * Fixed several Click-based console scripts so shell callers now receive correct
   non-zero exit codes on failure. The script-entry conventions in
   :mod:`pudl.scripts` now use Click-native exits and call ``main()`` directly in
@@ -62,14 +359,50 @@ Bug Fixes & Data Cleaning
   ``total_in_place`` and ``idle_in_place``, and documented why RUS Form 7 Part B
   subcomponents do not sum to the reported total within a year. See issue
   :issue:`5262` and PR :pr:`5323`.
+* Fixed several nightly/stable/branch deployment flow-control bugs: nightly builds
+  were silently landing in staging instead of production because
+  ``DEPLOYMENT_ENVIRONMENT`` was never wired into the build container's Batch job,
+  PUDL Viewer redeploys and Zenodo releases fired for every deploy type instead of
+  being restricted to nightly builds and non-branch builds respectively, stale
+  objects from earlier deployments were never cleared from the public GCS/S3 paths
+  before new outputs were written, and a staging copy of a stable release tag was
+  incorrectly treated as an immutable path that could never be cleared. See issue
+  :issue:`5382` and PR :pr:`5384`.
+* Added two new optional arguments to ``get_pudl_dtypes`` and ``apply_pudl_dtypes``.
+  ``resource`` (aka table) name will now return all of the authoritative
+  resource-specific dtypes instead of the generic or source-specific types.
+  ``dtype_backend`` will now return the types for the specific file type, which extends
+  the previous behavior of returning pandas dtypes. The dtype management now lives in
+  :mod:`pudl.metadata.dtypes`. See :pr:`5361`.
+* Fixed ``pudl_deploy`` returning a plain integer exit code from its Click command,
+  which Click's standalone mode silently discards, so shell callers previously saw
+  exit code 0 even when a deployment stage failed. It now uses ``ctx.exit()`` like
+  the other scripts fixed in :pr:`5374`. See :issue:`5382` and PR :pr:`5384`.
+* Fixed the longstanding issue with ``zenodo_data_release`` sandbox release failures
+  happening even when the publication actually succeeded, because a client-side
+  timeout on the publish request triggered a retry that legitimately 404s once a
+  deposit is already published, and that raw 404 body was then parsed as if it were
+  a real deposition. Also fixed the build-ID provenance marker file being a
+  zero-byte upload, which Zenodo rejects outright. See PR :pr:`5384`.
 
 Performance Improvements
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Sped up PUDL deploys by compressing SQLite databases concurrently in a thread
+  pool and uploading to all four GCS/S3 targets concurrently instead of one at a time.
+  Also reduced the SQLite ``compresslevel`` from 9 to 6, trading a little archive size
+  for much faster compression step. See :issue:`5382` and PR :pr:`5384`.
 
 Developer Experience
 ^^^^^^^^^^^^^^^^^^^^
 
 * Reduced spurious logging and error output from our unit tests. See PR :pr:`5362`.
+* Added two new optional arguments to ``get_pudl_dtypes`` and ``apply_pudl_dtypes``:
+  ``resource`` (aka table) name will now return all of the authoritative
+  resource-specific dtypes instead of the generic or source-specific types.
+  ``dtype_backend`` will now return the types for the specific file type, which extends
+  the previous behavior of returning pandas dtypes. The dtype management now lives in
+  :mod:`pudl.metadata.dtypes`. See :pr:`5361`.
 * Reworked the nightly PUDL build and deployment automation to send start and
   status notifications to the ``pudl-deployments`` Zulip stream directly from
   GitHub Actions and the batch build script, with per-stage timing summaries and
@@ -85,6 +418,20 @@ Developer Experience
   ``out_ferc714__georeferenced_respondents``) now use ``parquet_io_manager``.
   Updated the DuckDB dependency to ``>=1.5,<1.6``. See issues :issue:`4061,5074` and
   PR :pr:`5347`.
+* Extended the nightly build's Zulip reporting and stage-tracking machinery (added
+  in :pr:`5374`) to ``pudl_deploy``. Deployments now save logs to
+  ``builds.catalyst.coop`` and send a per-stage duration + outcome report to Zulip.
+  Centralized deployment logic and validation in a ``DeploymentPlan`` Pydantic model in
+  :mod:`pudl.deploy.pudl`. Replaced some ad-hoc ``curl``/JSON GitHub Actions dispatch
+  with the ``gh`` CLI and a shared ``dispatch_github_workflow()`` helper. Added
+  required-argument & duplicate-key validation to ``devtools/generate_batch_config.py``
+  Batch job config generator used by both the PUDL and FERC EQR build workflows. See
+  issue :issue:`5382` and PR :pr:`5384`.
+* Added a guard so that deploying to a permanent, version-tagged stable-release
+  path that already has content raises immediately instead of silently uploading
+  over it, and updated the Zenodo data release Zulip notification to state plainly
+  whether a release was sandbox or production and publish or draft, with a link to
+  the resulting record. See issue :issue:`5382` and PR :pr:`5384`.
 
 .. _release-v2026.6.1:
 

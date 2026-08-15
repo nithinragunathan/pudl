@@ -21,6 +21,10 @@ Attributes
    pudl.metadata.classes.PositiveFloat
    pudl.metadata.classes.T
    pudl.metadata.classes.StrictList
+   pudl.metadata.classes.FieldNamespace
+   pudl.metadata.classes.FIELD_NAMESPACES
+   pudl.metadata.classes.EtlGroup
+   pudl.metadata.classes.ETL_GROUPS
    pudl.metadata.classes.PUDL_PACKAGE
 
 
@@ -136,6 +140,24 @@ Module Contents
 
    Allows :class:`list`, :class:`tuple`, :class:`set`, :class:`frozenset`,
    :class:`collections.deque`, or generators and casts to a :class:`list`.
+
+.. py:data:: FieldNamespace
+
+   Canonical field namespace identifiers used by PUDL resources.
+
+.. py:data:: FIELD_NAMESPACES
+   :type:  tuple[FieldNamespace, Ellipsis]
+
+   All valid PUDL field namespace identifiers.
+
+.. py:data:: EtlGroup
+
+   Canonical ETL group identifiers used by PUDL resources.
+
+.. py:data:: ETL_GROUPS
+   :type:  tuple[EtlGroup, Ellipsis]
+
+   All valid PUDL ETL group identifiers.
 
 .. py:function:: _check_unique(value: list = None) -> list | None
 
@@ -552,17 +574,22 @@ Module Contents
 
       Return polars data type.
 
+      Enum-constrained string fields are stored as unconstrained
+      :class:`pl.Categorical` rather than :class:`pl.Enum`. Polars embeds a fixed,
+      ordered category list from an ``Enum`` column directly in the Parquet field
+      metadata, which permanently pins the physical dtype: any later attempt to scan
+      that file with a different schema or even slightly different ``Enum`` fails
+      instead of being coerced. ``Categorical`` round-trips through Parquet fine.
 
 
-   .. py:method:: to_pandas_dtype(compact: bool = False) -> str | pandas.CategoricalDtype
+
+   .. py:method:: to_pandas_dtype() -> str | pandas.CategoricalDtype
 
       Return Pandas data type.
 
-      :param compact: Whether to return a low-memory data type (32-bit integer or float).
 
 
-
-   .. py:method:: to_sql_dtype() -> type
+   .. py:method:: to_sqlite_dtype() -> type
 
       Return SQLAlchemy data type.
 
@@ -728,7 +755,7 @@ Module Contents
 
 
 
-   .. py:method:: to_pandera() -> pandera.polars.DataFrameSchema
+   .. py:method:: to_pandera() -> pandera.polars.DataFrameSchema | pandera.pandas.DataFrameSchema
 
       Turn PUDL Schema into Pandera schema, so dagster can understand it.
 
@@ -1626,13 +1653,13 @@ Module Contents
 
 
    .. py:attribute:: field_namespace
-      :type:  Literal['censusdp1tract', 'eia', 'eiaaeo', 'eiaapi', 'epacems', 'ferc', 'ferc1', 'ferc714', 'ferceqr', 'glue', 'gridpathratoolkit', 'ppe', 'pudl', 'nrelatb', 'vcerare', 'phmsagas', 'sec', 'rus'] | None
+      :type:  FieldNamespace | None
       :value: None
 
 
 
    .. py:attribute:: etl_group
-      :type:  Literal['censusdp1tract', 'eia176', 'eia191', 'eia860', 'eia861', 'eia861_disabled', 'eia923', 'eia930', 'eiaaeo', 'entity_eia', 'epacems', 'entity_ferc', 'ferc1', 'ferc1_disabled', 'ferc714', 'ferceqr', 'glue', 'gridpathratoolkit', 'outputs', 'static_ferc1', 'static_eia', 'static_eia_disabled', 'eiaapi', 'state_demand', 'static_pudl', 'service_territories', 'nrelatb', 'vcerare', 'phmsagas', 'sec10k', 'rus7', 'static_rus', 'rus12'] | None
+      :type:  EtlGroup | None
       :value: None
 
 
@@ -1767,11 +1794,9 @@ Module Contents
 
 
 
-   .. py:method:: to_pandas_dtypes(**kwargs: Any) -> dict[str, str | pandas.CategoricalDtype]
+   .. py:method:: to_pandas_dtypes() -> dict[str, str | pandas.CategoricalDtype]
 
       Return Pandas data type of each field by field name.
-
-      :param kwargs: Arguments to :meth:`Field.to_pandas_dtype`.
 
 
 
@@ -1821,7 +1846,7 @@ Module Contents
 
 
 
-   .. py:method:: format_df(df: pandas.DataFrame | geopandas.GeoDataFrame | None = None, **kwargs: Any) -> pandas.DataFrame | geopandas.GeoDataFrame
+   .. py:method:: format_df(df: pandas.DataFrame | geopandas.GeoDataFrame | None = None) -> pandas.DataFrame | geopandas.GeoDataFrame
 
       Format a dataframe according to the resources's table schema.
 
@@ -1835,7 +1860,6 @@ Module Contents
         (:meth:`match_primary_key`) or if ``df=None``, an empty dataframe is returned.
 
       :param df: Dataframe to format.
-      :param kwargs: Arguments to :meth:`Field.to_pandas_dtypes`.
 
       :returns: Dataframe with column names and data types matching the resource fields.
 
